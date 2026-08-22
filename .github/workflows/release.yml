@@ -1,0 +1,78 @@
+name: Release gem
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby
+          bundler-cache: true
+
+      - name: Read gem version
+        id: version
+        shell: bash
+        run: |
+          version="$(ruby -Ilib -rsole/version -e 'print Sole::VERSION')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release ref matches gem version
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_REF: ${{ github.ref_name }}
+        run: |
+          expected="v${VERSION}"
+
+          if [[ "$RELEASE_REF" != "$expected" ]]; then
+            echo "Release ref $RELEASE_REF does not match lib/sole/version.rb ($expected)."
+            exit 1
+          fi
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel
+
+      - name: Run specs with coverage
+        env:
+          COVERAGE: "true"
+        run: bundle exec rspec
+
+      - name: Build gem
+        run: bundle exec rake build
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: release
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ruby
+          bundler-cache: true
+
+      - name: Publish to RubyGems.org
+        uses: rubygems/release-gem@v1

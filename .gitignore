@@ -1,0 +1,7 @@
+/.bundle/
+/pkg/
+/vendor/bundle/
+Gemfile.lock
+*.gem
+/coverage/
+.rubocop-http---cache
