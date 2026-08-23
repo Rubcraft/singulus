@@ -22,7 +22,7 @@ jobs:
           bundler-cache: true
 
       - name: Run RuboCop
-        run: bundle exec rubocop --parallel
+        run: bundle exec rubocop --parallel --config .rubocop.yml --config .rubocop.yml
 
   test:
     runs-on: ubuntu-latest

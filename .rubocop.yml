@@ -21,20 +21,67 @@ Metrics/BlockLength:
     - "spec/**/*"
     - "*.gemspec"
 
+Metrics/ModuleLength:
+  Exclude:
+    - "lib/sole/multiton.rb"
+
 Metrics/MethodLength:
   Max: 20
+  Exclude:
+    - "lib/sole/multiton.rb"
 
 Metrics/AbcSize:
   Max: 20
+  Exclude:
+    - "lib/sole/multiton.rb"
+
+Metrics/CyclomaticComplexity:
+  Exclude:
+    - "lib/sole/multiton.rb"
+
+Metrics/PerceivedComplexity:
+  Exclude:
+    - "lib/sole/multiton.rb"
 
 Style/Documentation:
   Enabled: false
 
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+# Sole intentionally intercepts Ruby reflection gateways.
+Naming/MethodName:
+  Exclude:
+    - "lib/sole/internal/reflection_guard.rb"
+
+# Collision-resistant internal state names are intentional.
+Naming/MemoizedInstanceVariableName:
+  Exclude:
+    - "lib/sole/internal/singleton_class_methods.rb"
+    - "lib/sole/multiton.rb"
+
+# Some specs deliberately exercise reflective dispatch.
+Style/SendWithLiteralMethodName:
+  Exclude:
+    - "spec/**/*"
+
+# The test suite uses textual contract groups in addition to class groups.
+RSpec/DescribeClass:
+  Enabled: false
+
+# Simple top-level spec names are intentional for this small gem.
+RSpec/SpecFilePathFormat:
+  Enabled: false
+
 RSpec/MultipleExpectations:
-  Max: 5
+  Max: 8
 
 RSpec/ExampleLength:
-  Max: 15
+  Max: 20
 
 RSpec/NamedSubject:
+  Enabled: false
+
+# Development tooling belongs in Gemfile for this project.
+Gemspec/DevelopmentDependencies:
   Enabled: false

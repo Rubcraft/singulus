@@ -26,18 +26,14 @@ module Sole
       def with(mode = nil, **options)
         resolved_mode = options.delete(:mode)
 
-        if mode && resolved_mode
-          raise ArgumentError, "mode must be provided either positionally or as mode:, not both"
-        end
+        raise ArgumentError, "mode must be provided either positionally or as mode:, not both" if mode && resolved_mode
 
         resolved_mode ||= mode || Sole.configuration.default_mode
         retention = options.delete(:retention)
         ttl = options.delete(:ttl)
         max_size = options.delete(:max_size)
 
-        unless options.empty?
-          raise ArgumentError, "unknown Multiton options: #{options.keys.map(&:inspect).join(', ')}"
-        end
+        raise ArgumentError, "unknown Multiton options: #{options.keys.map(&:inspect).join(', ')}" unless options.empty?
 
         Module.new do
           define_singleton_method(:included) do |base|
@@ -76,7 +72,7 @@ module Sole
     end
 
     module ClassMethods
-      def instance_for(identifier, *args, **kwargs, &block)
+      def instance_for(identifier, ...)
         key = sole_multiton_key_for(identifier)
 
         sole_multiton_mutex.synchronize do
@@ -96,7 +92,7 @@ module Sole
 
           begin
             instance = Internal.with_constructor_access(self) do
-              new(identifier, *args, **kwargs, &block)
+              new(identifier, ...)
             end
             sole_multiton_store!(key, instance)
             instance
@@ -230,9 +226,7 @@ module Sole
 
       def sole_multiton_store!(key, instance)
         retention = @__sole_multiton_retention__
-        expires_at = if %i[ttl bounded].include?(retention)
-                       sole_multiton_monotonic_time + @__sole_multiton_ttl__
-                     end
+        expires_at = sole_multiton_monotonic_time + @__sole_multiton_ttl__ if %i[ttl bounded].include?(retention)
         value = retention == :weak ? WeakRef.new(instance) : instance
 
         sole_multiton_instances[key] = Entry.new(value: value, expires_at: expires_at)
@@ -274,7 +268,10 @@ module Sole
           raise Internal::InvalidRetentionError,
                 "#{strategy.inspect} retention does not accept ttl: or max_size:"
         when :ttl
-          raise Internal::InvalidRetentionError, ":ttl retention requires ttl: greater than zero" if !ttl || ttl.to_f <= 0
+          if !ttl || ttl.to_f <= 0
+            raise Internal::InvalidRetentionError,
+                  ":ttl retention requires ttl: greater than zero"
+          end
           return unless max_size
 
           raise Internal::InvalidRetentionError,
@@ -288,8 +285,11 @@ module Sole
           raise Internal::InvalidRetentionError,
                 "ttl: is not valid for :lru retention; use retention: :bounded to combine ttl and max_size"
         when :bounded
-          raise Internal::InvalidRetentionError, ":bounded retention requires ttl: greater than zero" if !ttl || ttl.to_f <= 0
-          return if max_size && max_size.to_i.positive?
+          if !ttl || ttl.to_f <= 0
+            raise Internal::InvalidRetentionError,
+                  ":bounded retention requires ttl: greater than zero"
+          end
+          return if max_size&.to_i&.positive?
 
           raise Internal::InvalidRetentionError, ":bounded retention requires max_size: greater than zero"
         end
