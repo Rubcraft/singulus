@@ -6,6 +6,7 @@ RSpec.describe Sole::Multiton do
   def build_multiton(mode: :strict, retention: nil, ttl: nil, max_size: nil, &block)
     Class.new do
       include Sole::Multiton
+
       sole mode: mode, retention: retention, ttl: ttl, max_size: max_size if retention
       class_eval(&block) if block
     end
@@ -61,8 +62,8 @@ RSpec.describe Sole::Multiton do
       end
     end
 
-    tenant = String.new("tenant")
-    region = String.new("ar")
+    tenant = +"tenant"
+    region = +"ar"
     original_key = [tenant, { region: region }]
 
     first = klass.instance_for(original_key)
@@ -215,6 +216,7 @@ RSpec.describe Sole::Multiton do
     klass = build_multiton
     expect { Class.new(klass) }.to raise_error(Sole::Error)
   end
+
   describe ".with" do
     it "configures mode directly from include" do
       klass = Class.new do
@@ -263,12 +265,12 @@ RSpec.describe Sole::Multiton do
     end
 
     it "rejects ambiguous mode arguments" do
-      expect { Sole::Multiton.with(:strict, mode: :runtime) }
+      expect { described_class.with(:strict, mode: :runtime) }
         .to raise_error(ArgumentError)
     end
 
     it "rejects unsupported options" do
-      expect { Sole::Multiton.with(foo: :bar) }
+      expect { described_class.with(foo: :bar) }
         .to raise_error(ArgumentError)
     end
   end
@@ -323,5 +325,4 @@ RSpec.describe Sole::Multiton do
         .to raise_error(Sole::Error)
     end
   end
-
 end

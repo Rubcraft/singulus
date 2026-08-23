@@ -6,6 +6,7 @@ RSpec.describe Sole do
   def build_class(mode: :strict, &block)
     Class.new do
       include Sole::Singleton
+
       sole mode: mode
       class_eval(&block) if block
     end
@@ -33,7 +34,7 @@ RSpec.describe Sole do
 
     it "blocks reflective constructor capture before instance" do
       expect { klass.method(:new) }.to raise_error(Sole::Error)
-      expect { klass.method("allocate") }.to raise_error(Sole::Error)
+      expect { klass.method(:allocate) }.to raise_error(Sole::Error)
     end
 
     it "blocks send and __send__ before instance" do
@@ -110,6 +111,7 @@ RSpec.describe Sole do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
       plain.include Sole::Singleton
+
       plain.sole mode: :runtime
 
       expect { captured.call }
@@ -120,6 +122,7 @@ RSpec.describe Sole do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
       plain.include Sole::Singleton
+
       plain.sole mode: :runtime
 
       expect { captured.to_proc }
@@ -140,6 +143,7 @@ RSpec.describe Sole do
       described_class.configure { |config| config.default_mode = :runtime }
 
       klass = Class.new { include Sole::Singleton }
+
       expect(klass.sole_mode).to eq(:runtime)
     end
 
@@ -149,6 +153,7 @@ RSpec.describe Sole do
       end.to raise_error(Sole::Error)
     end
   end
+
   describe ".with" do
     it "configures the mode directly from include" do
       klass = Class.new do
@@ -189,5 +194,4 @@ RSpec.describe Sole do
         .to raise_error(ArgumentError)
     end
   end
-
 end

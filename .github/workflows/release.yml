@@ -44,7 +44,7 @@ jobs:
           fi
 
       - name: Run RuboCop
-        run: bundle exec rubocop --parallel
+        run: bundle exec rubocop --parallel --config .rubocop.yml --config .rubocop.yml
 
       - name: Run specs with coverage
         env:

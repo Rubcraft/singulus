@@ -6,6 +6,7 @@ RSpec.describe "runtime hardening" do
   def runtime_multiton
     Class.new do
       include Sole::Multiton
+
       sole mode: :runtime
 
       def initialize(identifier)

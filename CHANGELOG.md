@@ -8,6 +8,22 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Fixed
 
+- Completed the final RuboCop cleanup across Multiton and specs.
+- Removed `refuse_coverage_drop`; coverage is enforced by absolute minimums of 95% line and 90% branch.
+
+- Normalized RuboCop policy so local Rubcraft checks and GitHub CI enforce the same repository-local configuration.
+- Fixed production-code indentation/alignment issues introduced during the `Sole::Internal` refactor.
+- Removed the redundant `thread` require.
+- Added RubyGems MFA metadata.
+- Moved development tooling declarations to Gemfile.
+- Kept intentional reflection interception, internal ivar naming, Multiton complexity, and contract-style specs explicitly documented in RuboCop configuration.
+
+- Added a small coverage buffer for safe mutation/reflection fallthrough paths and repeated runtime-hardening activation.
+
+- Made RuboCop configuration explicit and repository-local for identical local/CI behavior.
+- CI and release workflows now pass `.rubocop.yml` explicitly.
+- Standardized the project on double-quoted Ruby strings.
+
 - Added `bundler-audit` as a development dependency so Rubcraft's mandatory audit gate runs through the repository bundle.
 
 - Fixed `InstanceGuard#clone` so it does not forward an implicit `freeze:` keyword to Ruby Singleton implementations that accept no arguments.
