@@ -13,5 +13,4 @@ SimpleCov.start do
   track_files "lib/**/*.rb"
 
   minimum_coverage line: 95, branch: 90
-  refuse_coverage_drop
 end

@@ -85,6 +85,7 @@ RSpec.describe "Sole behavior contracts" do
     def build_multiton(mode: :strict, &block)
       Class.new do
         include Sole::Multiton.with(mode: mode)
+
         class_eval(&block) if block
       end
     end
@@ -117,7 +118,7 @@ RSpec.describe "Sole behavior contracts" do
 
     it "returns the current key normalizer and retention configuration" do
       klass = build_multiton
-      normalizer = ->(identifier) { identifier.to_s }
+      normalizer = lambda(&:to_s)
 
       expect(klass.multiton_key).to be_nil
       expect(klass.multiton_key(&normalizer)).to equal(klass)
@@ -154,8 +155,8 @@ RSpec.describe "Sole behavior contracts" do
       klass = build_multiton do
         attr_reader :payload
 
-        def initialize(identifier, extra, flag:, &block)
-          @payload = [identifier, extra, flag, block.call]
+        def initialize(identifier, extra, flag:)
+          @payload = [identifier, extra, flag, yield]
         end
       end
 
@@ -203,6 +204,7 @@ RSpec.describe "Sole behavior contracts" do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
       plain.include Sole::Singleton
+
       plain.sole mode: :runtime
       identity = ->(value) { value }
 
@@ -214,6 +216,7 @@ RSpec.describe "Sole behavior contracts" do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
       plain.include Sole::Singleton
+
       plain.sole mode: :runtime
 
       composed = ->(value) { value } << captured

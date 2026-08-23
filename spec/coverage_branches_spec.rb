@@ -113,6 +113,7 @@ RSpec.describe "Sole branch coverage contracts" do
       captured = Class.instance_method(:new).bind(plain)
 
       plain.include Sole::Singleton
+
       plain.sole mode: :strict
 
       expect { captured.call }.not_to raise_error
