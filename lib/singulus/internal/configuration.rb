@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Sole
+module Singulus
   module Internal
     class Configuration
       MODES = %i[standard strict runtime].freeze
@@ -16,7 +16,7 @@ module Sole
 
         unless MODES.include?(mode)
           raise InvalidModeError,
-                "invalid Sole mode #{mode.inspect}; expected one of: #{MODES.join(', ')}"
+                "invalid Singulus mode #{mode.inspect}; expected one of: #{MODES.join(', ')}"
         end
 
         @default_mode = mode

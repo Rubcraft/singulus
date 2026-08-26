@@ -7,8 +7,8 @@ SimpleCov.start do
   add_filter "/spec/"
   add_filter "/vendor/"
 
-  add_group "Core", "lib/sole.rb"
-  add_group "Components", "lib/sole"
+  add_group "Core", "lib/singulus.rb"
+  add_group "Components", "lib/singulus"
 
   track_files "lib/**/*.rb"
 

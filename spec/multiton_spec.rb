@@ -2,12 +2,12 @@
 
 require "spec_helper"
 
-RSpec.describe Sole::Multiton do
+RSpec.describe Singulus::Multiton do
   def build_multiton(mode: :strict, retention: nil, ttl: nil, max_size: nil, &block)
     Class.new do
-      include Sole::Multiton
+      include Singulus::Multiton
 
-      sole mode: mode, retention: retention, ttl: ttl, max_size: max_size if retention
+      singulus mode: mode, retention: retention, ttl: ttl, max_size: max_size if retention
       class_eval(&block) if block
     end
   end
@@ -128,7 +128,7 @@ RSpec.describe Sole::Multiton do
       end
     end
 
-    allow(klass).to receive(:sole_multiton_monotonic_time).and_return(100.0, 100.0, 200.0, 200.0)
+    allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(100.0, 100.0, 200.0, 200.0)
 
     first = klass.instance_for(1)
     second = klass.instance_for(1)
@@ -138,13 +138,13 @@ RSpec.describe Sole::Multiton do
 
   it "rejects invalid retention options" do
     expect { build_multiton(retention: :ttl) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
 
     expect { build_multiton(retention: :lru, max_size: 0) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
 
     expect { build_multiton(retention: :forever, ttl: 1) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
   end
 
   it "locks key and retention configuration once instances exist" do
@@ -157,9 +157,9 @@ RSpec.describe Sole::Multiton do
     klass.instance_for(1)
 
     expect { klass.multiton_key(&:to_s) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
     expect { klass.multiton_retention(:lru, max_size: 10) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
   end
 
   it "detects recursive initialization for the same key" do
@@ -171,7 +171,7 @@ RSpec.describe Sole::Multiton do
     end
 
     expect { klass.instance_for(:recursive) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
   end
 
   it "restores its constructor after a rejected mutation" do
@@ -183,7 +183,7 @@ RSpec.describe Sole::Multiton do
 
     expect do
       klass.define_singleton_method(:new) { |_identifier| :bypass }
-    end.to raise_error(Sole::Error)
+    end.to raise_error(Singulus::Error)
 
     expect(klass.instance_for(1)).to be_a(klass)
   end
@@ -195,8 +195,8 @@ RSpec.describe Sole::Multiton do
       end
     end
 
-    expect { klass.method(:new) }.to raise_error(Sole::Error)
-    expect { klass.send(:new, 1) }.to raise_error(Sole::Error)
+    expect { klass.method(:new) }.to raise_error(Singulus::Error)
+    expect { klass.send(:new, 1) }.to raise_error(Singulus::Error)
   end
 
   it "blocks duplication in hardened modes" do
@@ -208,32 +208,32 @@ RSpec.describe Sole::Multiton do
 
     instance = klass.instance_for(1)
 
-    expect { instance.dup }.to raise_error(Sole::Error)
-    expect { instance.clone }.to raise_error(Sole::Error)
+    expect { instance.dup }.to raise_error(Singulus::Error)
+    expect { instance.clone }.to raise_error(Singulus::Error)
   end
 
   it "prevents inheritance in hardened modes" do
     klass = build_multiton
-    expect { Class.new(klass) }.to raise_error(Sole::Error)
+    expect { Class.new(klass) }.to raise_error(Singulus::Error)
   end
 
   describe ".with" do
     it "configures mode directly from include" do
       klass = Class.new do
-        include Sole::Multiton.with(:runtime)
+        include Singulus::Multiton.with(:runtime)
 
         def initialize(identifier)
           @identifier = identifier
         end
       end
 
-      expect(klass.sole_mode).to eq(:runtime)
+      expect(klass.singulus_mode).to eq(:runtime)
       expect(klass.instance_for(1)).to be_a(klass)
     end
 
     it "configures retention directly from include" do
       klass = Class.new do
-        include Sole::Multiton.with(
+        include Singulus::Multiton.with(
           :strict,
           retention: :lru,
           max_size: 2
@@ -253,14 +253,14 @@ RSpec.describe Sole::Multiton do
 
     it "accepts the keyword mode form" do
       klass = Class.new do
-        include Sole::Multiton.with(
+        include Singulus::Multiton.with(
           mode: :strict,
           retention: :ttl,
           ttl: 60
         )
       end
 
-      expect(klass.sole_mode).to eq(:strict)
+      expect(klass.singulus_mode).to eq(:strict)
       expect(klass.multiton_retention).to eq(:ttl)
     end
 
@@ -278,12 +278,12 @@ RSpec.describe Sole::Multiton do
   describe "advanced retention" do
     it "rejects max_size with ttl and points to bounded" do
       expect { build_multiton(retention: :ttl, ttl: 60, max_size: 3) }
-        .to raise_error(Sole::Error, /:bounded/)
+        .to raise_error(Singulus::Error, /:bounded/)
     end
 
     it "rejects ttl with lru and points to bounded" do
       expect { build_multiton(retention: :lru, ttl: 60, max_size: 3) }
-        .to raise_error(Sole::Error, /:bounded/)
+        .to raise_error(Singulus::Error, /:bounded/)
     end
 
     it "supports bounded retention with TTL and LRU limits" do
@@ -293,7 +293,7 @@ RSpec.describe Sole::Multiton do
         end
       end
 
-      allow(klass).to receive(:sole_multiton_monotonic_time).and_return(100.0)
+      allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(100.0)
       klass.instance_for(1)
       klass.instance_for(2)
       klass.instance_for(1)
@@ -301,15 +301,15 @@ RSpec.describe Sole::Multiton do
 
       expect(klass.instance_keys).to eq([1, 3])
 
-      allow(klass).to receive(:sole_multiton_monotonic_time).and_return(200.0)
+      allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(200.0)
       expect(klass.instance_count).to eq(0)
     end
 
     it "requires both ttl and max_size for bounded retention" do
       expect { build_multiton(retention: :bounded, ttl: 60) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
       expect { build_multiton(retention: :bounded, max_size: 3) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "supports weak retention without accepting ttl or max_size" do
@@ -322,7 +322,7 @@ RSpec.describe Sole::Multiton do
       first = klass.instance_for(1)
       expect(klass.instance_for(1)).to equal(first)
       expect { klass.multiton_retention(:weak, ttl: 1) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
   end
 end

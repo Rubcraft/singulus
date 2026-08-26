@@ -27,7 +27,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          version="$(ruby -Ilib -rsole/version -e 'print Sole::VERSION')"
+          version="$(ruby -Ilib -rsingulus/version -e 'print Singulus::VERSION')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Verify release ref matches gem version
@@ -39,7 +39,7 @@ jobs:
           expected="v${VERSION}"
 
           if [[ "$RELEASE_REF" != "$expected" ]]; then
-            echo "Release ref $RELEASE_REF does not match lib/sole/version.rb ($expected)."
+            echo "Release ref $RELEASE_REF does not match lib/singulus/version.rb ($expected)."
             exit 1
           fi
 

@@ -12,7 +12,7 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Removed `refuse_coverage_drop`; coverage is enforced by absolute minimums of 95% line and 90% branch.
 
 - Normalized RuboCop policy so local Rubcraft checks and GitHub CI enforce the same repository-local configuration.
-- Fixed production-code indentation/alignment issues introduced during the `Sole::Internal` refactor.
+- Fixed production-code indentation/alignment issues introduced during the `Singulus::Internal` refactor.
 - Removed the redundant `thread` require.
 - Added RubyGems MFA metadata.
 - Moved development tooling declarations to Gemfile.
@@ -44,18 +44,18 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Changed
 
-- Reduced the public root API to `Sole::Singleton`, `Sole::Multiton`, `Sole::Error`, `Sole::VERSION`, and the configuration facade.
-- Moved implementation classes, guards, configuration objects, and specialized exceptions behind a private `Sole::Internal` namespace.
+- Reduced the public root API to `Singulus::Singleton`, `Singulus::Multiton`, `Singulus::Error`, `Singulus::VERSION`, and the configuration facade.
+- Moved implementation classes, guards, configuration objects, and specialized exceptions behind a private `Singulus::Internal` namespace.
 - Marked Multiton implementation constants (`RETENTIONS`, `Entry`, and `ClassMethods`) private.
 - Added a public API contract spec to prevent accidental constant leakage.
 
 ### Added
 
-- `Sole::Singleton` for one managed instance per class.
-- `Sole::Multiton` for one managed instance per normalized identifier.
+- `Singulus::Singleton` for one managed instance per class.
+- `Singulus::Multiton` for one managed instance per normalized identifier.
 - `:standard`, `:strict`, and `:runtime` hardening modes.
-- Include-time configuration with `Sole::Singleton.with(...)` and `Sole::Multiton.with(...)`.
-- Two-step `sole` DSL in addition to include-time `.with(...)` configuration.
+- Include-time configuration with `Singulus::Singleton.with(...)` and `Singulus::Multiton.with(...)`.
+- Two-step `singulus` DSL in addition to include-time `.with(...)` configuration.
 - Multiton key normalization and defensive stabilization of common mutable keys.
 - `:forever`, `:lru`, `:ttl`, `:bounded`, and `:weak` Multiton retention strategies.
 - Explicit Multiton lifecycle operations: `instance?`, `instance_count`, `instance_keys`, `delete_instance`, and `clear_instances`.
@@ -67,11 +67,11 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ### Security
 
-- Guard `new` and `allocate` from the moment hardened Sole modules are included.
+- Guard `new` and `allocate` from the moment hardened Singulus modules are included.
 - Prevent constructor bypass by changing constructor visibility.
 - Reject constructor redefinition attempts in hardened modes.
 - Protect common reflective constructor access paths.
 - Protect captured `Method` and `UnboundMethod` paths in `:runtime` mode.
 
-[Unreleased]: https://github.com/Rubcraft/sole/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Rubcraft/sole/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Rubcraft/singulus/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Rubcraft/singulus/releases/tag/v0.1.0

@@ -2,14 +2,14 @@
 
 require "spec_helper"
 
-RSpec.describe "Sole coverage buffer" do
+RSpec.describe "Singulus coverage buffer" do
   after do
-    Sole.reset_configuration!
+    Singulus.reset_configuration!
   end
 
   it "keeps a non-constructor singleton method definition untouched in strict mode" do
     klass = Class.new do
-      include Sole::Singleton
+      include Singulus::Singleton
     end
 
     expect do
@@ -21,7 +21,7 @@ RSpec.describe "Sole coverage buffer" do
 
   it "keeps a non-constructor singleton method definition untouched in standard Multiton mode" do
     klass = Class.new do
-      include Sole::Multiton.with(:standard)
+      include Singulus::Multiton.with(:standard)
 
       def initialize(identifier)
         @identifier = identifier
@@ -37,22 +37,22 @@ RSpec.describe "Sole coverage buffer" do
 
   it "returns the same runtime hardening state when enable is called repeatedly" do
     klass = Class.new do
-      include Sole::Singleton.with(:runtime)
+      include Singulus::Singleton.with(:runtime)
     end
 
-    first = klass.sole_mode
+    first = klass.singulus_mode
 
     another = Class.new do
-      include Sole::Singleton.with(:runtime)
+      include Singulus::Singleton.with(:runtime)
     end
 
     expect(first).to eq(:runtime)
-    expect(another.sole_mode).to eq(:runtime)
+    expect(another.singulus_mode).to eq(:runtime)
   end
 
   it "allows a safe public_send in strict mode" do
     klass = Class.new do
-      include Sole::Singleton
+      include Singulus::Singleton
 
       def self.echo(value)
         value

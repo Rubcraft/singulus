@@ -23,25 +23,25 @@ Metrics/BlockLength:
 
 Metrics/ModuleLength:
   Exclude:
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/multiton.rb"
 
 Metrics/MethodLength:
   Max: 20
   Exclude:
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/multiton.rb"
 
 Metrics/AbcSize:
   Max: 20
   Exclude:
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/multiton.rb"
 
 Metrics/CyclomaticComplexity:
   Exclude:
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/multiton.rb"
 
 Metrics/PerceivedComplexity:
   Exclude:
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/multiton.rb"
 
 Style/Documentation:
   Enabled: false
@@ -49,16 +49,16 @@ Style/Documentation:
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
-# Sole intentionally intercepts Ruby reflection gateways.
+# Singulus intentionally intercepts Ruby reflection gateways.
 Naming/MethodName:
   Exclude:
-    - "lib/sole/internal/reflection_guard.rb"
+    - "lib/singulus/internal/reflection_guard.rb"
 
 # Collision-resistant internal state names are intentional.
 Naming/MemoizedInstanceVariableName:
   Exclude:
-    - "lib/sole/internal/singleton_class_methods.rb"
-    - "lib/sole/multiton.rb"
+    - "lib/singulus/internal/singleton_class_methods.rb"
+    - "lib/singulus/multiton.rb"
 
 # Some specs deliberately exercise reflective dispatch.
 Style/SendWithLiteralMethodName:

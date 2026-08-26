@@ -1,10 +1,10 @@
 # Release checklist
 
-Sole delegates repository initialization, commits, branches, version-control operations, and release-tag creation to the Rubcraft Toolkit. This repository intentionally does not duplicate those commands.
+Singulus delegates repository initialization, commits, branches, version-control operations, and release-tag creation to the Rubcraft Toolkit. This repository intentionally does not duplicate those commands.
 
-Before publishing a Sole release:
+Before publishing a Singulus release:
 
-1. Update `Sole::VERSION` and `CHANGELOG.md`.
+1. Update `Singulus::VERSION` and `CHANGELOG.md`.
 2. Run `bundle exec rubocop --parallel`.
 3. Run `COVERAGE=true bundle exec rspec`.
 4. Run `bundle exec rake build` and inspect the generated gem.
