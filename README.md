@@ -1,31 +1,31 @@
-# Sole
+# Singulus
 
-[![CI](https://github.com/Rubcraft/sole/actions/workflows/ci.yml/badge.svg)](https://github.com/Rubcraft/sole/actions/workflows/ci.yml)
-[![Gem Version](https://badge.fury.io/rb/sole.svg)](https://rubygems.org/gems/sole)
+[![CI](https://github.com/Rubcraft/singulus/actions/workflows/ci.yml/badge.svg)](https://github.com/Rubcraft/singulus/actions/workflows/ci.yml)
+[![Gem Version](https://badge.fury.io/rb/singulus.svg)](https://rubygems.org/gems/singulus)
 
 
-`Sole` adds configurable Ruby-level hardening around two instance-uniqueness patterns:
+`Singulus` adds configurable Ruby-level hardening around two instance-uniqueness patterns:
 
-- `Sole::Singleton` — one instance per class and Ruby process.
-- `Sole::Multiton` — one registered instance per class and normalized key.
+- `Singulus::Singleton` — one instance per class and Ruby process.
+- `Singulus::Multiton` — one registered instance per class and normalized key.
 
 It builds on Ruby's standard `Singleton` for the classic Singleton implementation and provides its own thread-safe keyed registry for Multiton.
 
-Sole exposes one supported entry point:
+Singulus exposes one supported entry point:
 
 ```ruby
-require "sole"
+require "singulus"
 ```
 
 The supported root API is intentionally small:
 
-- `Sole::Singleton`
-- `Sole::Multiton`
-- `Sole::Error` as the public base exception
-- `Sole.configure`, `Sole.configuration`, and `Sole.reset_configuration!`
-- `Sole::VERSION`
+- `Singulus::Singleton`
+- `Singulus::Multiton`
+- `Singulus::Error` as the public base exception
+- `Singulus.configure`, `Singulus.configuration`, and `Singulus.reset_configuration!`
+- `Singulus::VERSION`
 
-All implementation classes, guards, configuration types, and specialized errors live behind a private `Sole::Internal` namespace and are not public constants. No pre-release compatibility entry points are shipped.
+All implementation classes, guards, configuration types, and specialized errors live behind a private `Singulus::Internal` namespace and are not public constants. No pre-release compatibility entry points are shipped.
 
 ## Security boundary
 
@@ -34,7 +34,7 @@ This gem is aggressive Ruby-level hardening, **not a sandbox**. Code executing i
 ## Modes
 
 ```ruby
-Sole.configure do |config|
+Singulus.configure do |config|
   config.default_mode = :strict
 end
 ```
@@ -49,19 +49,19 @@ The default is `:strict`.
 
 ### Configure directly from `include`
 
-`Singleton` and `Multiton` also expose `.with(...)`, which creates an independent configured inclusion module. It does not mutate the shared `Sole::Singleton` or `Sole::Multiton` module.
+`Singleton` and `Multiton` also expose `.with(...)`, which creates an independent configured inclusion module. It does not mutate the shared `Singulus::Singleton` or `Singulus::Multiton` module.
 
 ```ruby
 class Configuration
-  include Sole::Singleton.with(:strict)
+  include Singulus::Singleton.with(:strict)
 end
 
 class RuntimeConfiguration
-  include Sole::Singleton.with(mode: :runtime)
+  include Singulus::Singleton.with(mode: :runtime)
 end
 
 class TenantConfiguration
-  include Sole::Multiton.with(
+  include Singulus::Multiton.with(
     :runtime,
     retention: :lru,
     max_size: 5_000
@@ -72,17 +72,17 @@ end
 The existing two-step DSL remains supported and equivalent:
 
 ```ruby
-include Sole::Singleton
-sole mode: :strict
+include Singulus::Singleton
+singulus mode: :strict
 ```
 
 ## Classic Singleton
 
 ```ruby
-require "sole"
+require "singulus"
 
 class Configuration
-  include Sole::Singleton.with(:runtime)
+  include Singulus::Singleton.with(:runtime)
 end
 
 Configuration.instance.equal?(Configuration.instance)
@@ -95,7 +95,7 @@ In hardened modes, direct constructor access is guarded from the moment the modu
 
 ```ruby
 class TenantConfiguration
-  include Sole::Multiton.with(:strict)
+  include Singulus::Multiton.with(:strict)
 
   def initialize(tenant_id)
     @tenant_id = tenant_id
@@ -120,7 +120,7 @@ For domain objects, define a key normalizer:
 
 ```ruby
 class TenantConfiguration
-  include Sole::Multiton
+  include Singulus::Multiton
 
   multiton_key { |tenant| tenant.id }
 
@@ -150,7 +150,7 @@ The default is strict registry retention:
 
 ```ruby
 class TenantConfiguration
-  include Sole::Multiton
+  include Singulus::Multiton
   multiton_retention :forever
 end
 ```
@@ -191,7 +191,7 @@ Combines TTL expiration with an LRU capacity bound. Entries are evicted when the
 multiton_retention :weak
 ```
 
-Stores weak references. Sole reuses the same object while it remains alive elsewhere, but the garbage collector may reclaim it when no strong references remain. A later `instance_for` can therefore create a new instance. `:weak` accepts neither `ttl` nor `max_size`.
+Stores weak references. Singulus reuses the same object while it remains alive elsewhere, but the garbage collector may reclaim it when no strong references remain. A later `instance_for` can therefore create a new instance. `:weak` accepts neither `ttl` nor `max_size`.
 
 | Strategy | `ttl` | `max_size` | Identity scope |
 | --- | --- | --- | --- |
@@ -220,14 +220,14 @@ The patches are installed process-wide once required, but their rejection logic 
 Enable runtime mode as early as possible during boot:
 
 ```ruby
-Sole.configure do |config|
+Singulus.configure do |config|
   config.default_mode = :runtime
 end
 ```
 
 For Rails, place this in an early initializer before code that might capture constructor references.
 
-A `Proc` created from a constructor `Method` *before* Sole runtime hardening is enabled cannot be retroactively identified as constructor-derived. Enable `:runtime` during boot, before untrusted or extension code can capture such references.
+A `Proc` created from a constructor `Method` *before* Singulus runtime hardening is enabled cannot be retroactively identified as constructor-derived. Enable `:runtime` during boot, before untrusted or extension code can capture such references.
 
 ## Development
 
@@ -243,6 +243,6 @@ SimpleCov enforces line and branch coverage, while CI tests supported Ruby versi
 
 ## Releasing
 
-Repository initialization, version-control operations, and release-tag creation are managed by the Rubcraft Toolkit. Sole itself does not prescribe or duplicate those commands.
+Repository initialization, version-control operations, and release-tag creation are managed by the Rubcraft Toolkit. Singulus itself does not prescribe or duplicate those commands.
 
-The repository keeps only the CI/publish boundary: `.github/workflows/release.yml` reacts to a version tag produced by the Toolkit, verifies that it matches `Sole::VERSION`, runs quality checks, builds the gem, and publishes through RubyGems Trusted Publishing (OIDC). Configure a GitHub environment named `release` and the matching RubyGems Trusted Publisher before the first release.
+The repository keeps only the CI/publish boundary: `.github/workflows/release.yml` reacts to a version tag produced by the Toolkit, verifies that it matches `Singulus::VERSION`, runs quality checks, builds the gem, and publishes through RubyGems Trusted Publishing (OIDC). Configure a GitHub environment named `release` and the matching RubyGems Trusted Publisher before the first release.

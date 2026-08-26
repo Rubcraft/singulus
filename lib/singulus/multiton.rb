@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Sole
+module Singulus
   module Multiton
     RETENTIONS = %i[forever lru ttl bounded weak].freeze
     private_constant :RETENTIONS
@@ -28,7 +28,7 @@ module Sole
 
         raise ArgumentError, "mode must be provided either positionally or as mode:, not both" if mode && resolved_mode
 
-        resolved_mode ||= mode || Sole.configuration.default_mode
+        resolved_mode ||= mode || Singulus.configuration.default_mode
         retention = options.delete(:retention)
         ttl = options.delete(:ttl)
         max_size = options.delete(:max_size)
@@ -38,12 +38,12 @@ module Sole
         Module.new do
           define_singleton_method(:included) do |base|
             Multiton.install(base, mode: resolved_mode)
-            base.sole(retention: retention, ttl: ttl, max_size: max_size) if retention
+            base.singulus(retention: retention, ttl: ttl, max_size: max_size) if retention
           end
         end
       end
 
-      def install(base, mode: Sole.configuration.default_mode)
+      def install(base, mode: Singulus.configuration.default_mode)
         Internal.initialize_managed_class!(base, kind: :multiton, mode: mode)
 
         base.include Internal::InstanceGuard
@@ -61,108 +61,108 @@ module Sole
       private
 
       def initialize_registry_state(base)
-        base.instance_variable_set(:@__sole_multiton_mutex__, Monitor.new)
-        base.instance_variable_set(:@__sole_multiton_instances__, {})
-        base.instance_variable_set(:@__sole_multiton_key_normalizer__, nil)
-        base.instance_variable_set(:@__sole_multiton_retention__, :forever)
-        base.instance_variable_set(:@__sole_multiton_ttl__, nil)
-        base.instance_variable_set(:@__sole_multiton_max_size__, nil)
-        base.instance_variable_set(:@__sole_multiton_initializing_keys__, {})
+        base.instance_variable_set(:@__singulus_multiton_mutex__, Monitor.new)
+        base.instance_variable_set(:@__singulus_multiton_instances__, {})
+        base.instance_variable_set(:@__singulus_multiton_key_normalizer__, nil)
+        base.instance_variable_set(:@__singulus_multiton_retention__, :forever)
+        base.instance_variable_set(:@__singulus_multiton_ttl__, nil)
+        base.instance_variable_set(:@__singulus_multiton_max_size__, nil)
+        base.instance_variable_set(:@__singulus_multiton_initializing_keys__, {})
       end
     end
 
     module ClassMethods
       def instance_for(identifier, ...)
-        key = sole_multiton_key_for(identifier)
+        key = singulus_multiton_key_for(identifier)
 
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
 
-          if (entry = sole_multiton_instances[key])
+          if (entry = singulus_multiton_instances[key])
             if (instance = entry.instance)
-              sole_multiton_touch_lru!(key, entry)
+              singulus_multiton_touch_lru!(key, entry)
               return instance
             end
 
-            sole_multiton_instances.delete(key)
+            singulus_multiton_instances.delete(key)
           end
 
-          sole_multiton_reject_recursive_initialization!(key)
-          sole_multiton_initializing_keys[key] = true
+          singulus_multiton_reject_recursive_initialization!(key)
+          singulus_multiton_initializing_keys[key] = true
 
           begin
             instance = Internal.with_constructor_access(self) do
               new(identifier, ...)
             end
-            sole_multiton_store!(key, instance)
+            singulus_multiton_store!(key, instance)
             instance
           ensure
-            sole_multiton_initializing_keys.delete(key)
+            singulus_multiton_initializing_keys.delete(key)
           end
         end
       end
 
       def instance?(identifier)
-        key = sole_multiton_key_for(identifier)
+        key = singulus_multiton_key_for(identifier)
 
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
-          sole_multiton_instances.key?(key)
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
+          singulus_multiton_instances.key?(key)
         end
       end
 
       def delete_instance(identifier)
-        key = sole_multiton_key_for(identifier)
+        key = singulus_multiton_key_for(identifier)
 
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
-          sole_multiton_instances.delete(key)&.instance
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
+          singulus_multiton_instances.delete(key)&.instance
         end
       end
 
       def clear_instances
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
-          count = sole_multiton_instances.length
-          sole_multiton_instances.clear
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
+          count = singulus_multiton_instances.length
+          singulus_multiton_instances.clear
           count
         end
       end
 
       def instance_count
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
-          sole_multiton_instances.length
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
+          singulus_multiton_instances.length
         end
       end
 
       def instance_keys
-        sole_multiton_mutex.synchronize do
-          sole_multiton_purge_expired!
-          sole_multiton_instances.keys.dup.freeze
+        singulus_multiton_mutex.synchronize do
+          singulus_multiton_purge_expired!
+          singulus_multiton_instances.keys.dup.freeze
         end
       end
 
-      def sole(mode: nil, retention: nil, ttl: nil, max_size: nil)
+      def singulus(mode: nil, retention: nil, ttl: nil, max_size: nil)
         Internal.set_mode!(self, mode) if mode
         multiton_retention(retention, ttl: ttl, max_size: max_size) if retention
         self
       end
 
-      def sole_mode
+      def singulus_mode
         Internal.mode_for(self)
       end
 
       def multiton_key(&block)
-        return @__sole_multiton_key_normalizer__ unless block
+        return @__singulus_multiton_key_normalizer__ unless block
 
-        sole_multiton_assert_registry_empty!("key normalizer")
-        @__sole_multiton_key_normalizer__ = block
+        singulus_multiton_assert_registry_empty!("key normalizer")
+        @__singulus_multiton_key_normalizer__ = block
         self
       end
 
       def multiton_retention(strategy = nil, ttl: nil, max_size: nil)
-        return @__sole_multiton_retention__ unless strategy
+        return @__singulus_multiton_retention__ unless strategy
 
         strategy = Internal.normalize_method_name(strategy)
         unless RETENTIONS.include?(strategy)
@@ -170,12 +170,12 @@ module Sole
                 "invalid Multiton retention #{strategy.inspect}; expected one of: #{RETENTIONS.join(', ')}"
         end
 
-        sole_multiton_validate_retention_options!(strategy, ttl: ttl, max_size: max_size)
-        sole_multiton_assert_registry_empty!("retention")
+        singulus_multiton_validate_retention_options!(strategy, ttl: ttl, max_size: max_size)
+        singulus_multiton_assert_registry_empty!("retention")
 
-        @__sole_multiton_retention__ = strategy
-        @__sole_multiton_ttl__ = ttl&.to_f
-        @__sole_multiton_max_size__ = max_size&.to_i
+        @__singulus_multiton_retention__ = strategy
+        @__singulus_multiton_ttl__ = ttl&.to_f
+        @__singulus_multiton_max_size__ = max_size&.to_i
         self
       end
 
@@ -184,83 +184,84 @@ module Sole
       def inherited(subclass)
         if Internal.locally_hardened?(self)
           raise Internal::InheritanceError,
-                "#{self} is a Multiton in #{sole_mode.inspect} mode and cannot be subclassed"
+                "#{self} is a Multiton in #{singulus_mode.inspect} mode and cannot be subclassed"
         end
 
         super
-        Multiton.install(subclass, mode: sole_mode)
+        Multiton.install(subclass, mode: singulus_mode)
       end
 
-      def sole_multiton_instances
-        @__sole_multiton_instances__ ||= {}
+      def singulus_multiton_instances
+        @__singulus_multiton_instances__ ||= {}
       end
 
-      def sole_multiton_mutex
-        @__sole_multiton_mutex__ ||= Monitor.new
+      def singulus_multiton_mutex
+        @__singulus_multiton_mutex__ ||= Monitor.new
       end
 
-      def sole_multiton_initializing_keys
-        @__sole_multiton_initializing_keys__ ||= {}
+      def singulus_multiton_initializing_keys
+        @__singulus_multiton_initializing_keys__ ||= {}
       end
 
-      def sole_multiton_key_for(identifier)
-        normalizer = @__sole_multiton_key_normalizer__
+      def singulus_multiton_key_for(identifier)
+        normalizer = @__singulus_multiton_key_normalizer__
         key = normalizer ? normalizer.call(identifier) : identifier
-        sole_multiton_stabilize_key(key)
+        singulus_multiton_stabilize_key(key)
       end
 
-      def sole_multiton_stabilize_key(key)
+      def singulus_multiton_stabilize_key(key)
         case key
         when String
           key.dup.freeze
         when Array
-          key.map { |item| sole_multiton_stabilize_key(item) }.freeze
+          key.map { |item| singulus_multiton_stabilize_key(item) }.freeze
         when Hash
           key.each_with_object({}) do |(hash_key, value), stabilized|
-            stabilized[sole_multiton_stabilize_key(hash_key)] = sole_multiton_stabilize_key(value)
+            stabilized[singulus_multiton_stabilize_key(hash_key)] = singulus_multiton_stabilize_key(value)
           end.freeze
         else
           key
         end
       end
 
-      def sole_multiton_store!(key, instance)
-        retention = @__sole_multiton_retention__
-        expires_at = sole_multiton_monotonic_time + @__sole_multiton_ttl__ if %i[ttl bounded].include?(retention)
+      def singulus_multiton_store!(key, instance)
+        retention = @__singulus_multiton_retention__
+        ttl_retention = %i[ttl bounded].include?(retention)
+        expires_at = singulus_multiton_monotonic_time + @__singulus_multiton_ttl__ if ttl_retention
         value = retention == :weak ? WeakRef.new(instance) : instance
 
-        sole_multiton_instances[key] = Entry.new(value: value, expires_at: expires_at)
-        sole_multiton_evict_lru! if %i[lru bounded].include?(retention)
+        singulus_multiton_instances[key] = Entry.new(value: value, expires_at: expires_at)
+        singulus_multiton_evict_lru! if %i[lru bounded].include?(retention)
       end
 
-      def sole_multiton_touch_lru!(key, entry)
-        return unless %i[lru bounded].include?(@__sole_multiton_retention__)
+      def singulus_multiton_touch_lru!(key, entry)
+        return unless %i[lru bounded].include?(@__singulus_multiton_retention__)
 
-        sole_multiton_instances.delete(key)
-        sole_multiton_instances[key] = entry
+        singulus_multiton_instances.delete(key)
+        singulus_multiton_instances[key] = entry
       end
 
-      def sole_multiton_evict_lru!
-        max_size = @__sole_multiton_max_size__
-        sole_multiton_instances.shift while sole_multiton_instances.length > max_size
+      def singulus_multiton_evict_lru!
+        max_size = @__singulus_multiton_max_size__
+        singulus_multiton_instances.shift while singulus_multiton_instances.length > max_size
       end
 
-      def sole_multiton_purge_expired!
-        retention = @__sole_multiton_retention__
+      def singulus_multiton_purge_expired!
+        retention = @__singulus_multiton_retention__
 
         if %i[ttl bounded].include?(retention)
-          now = sole_multiton_monotonic_time
-          sole_multiton_instances.delete_if { |_key, entry| entry.expires_at <= now }
+          now = singulus_multiton_monotonic_time
+          singulus_multiton_instances.delete_if { |_key, entry| entry.expires_at <= now }
         elsif retention == :weak
-          sole_multiton_instances.delete_if { |_key, entry| !entry.alive? }
+          singulus_multiton_instances.delete_if { |_key, entry| !entry.alive? }
         end
       end
 
-      def sole_multiton_monotonic_time
+      def singulus_multiton_monotonic_time
         Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
 
-      def sole_multiton_validate_retention_options!(strategy, ttl:, max_size:)
+      def singulus_multiton_validate_retention_options!(strategy, ttl:, max_size:)
         case strategy
         when :forever, :weak
           return unless ttl || max_size
@@ -295,14 +296,14 @@ module Sole
         end
       end
 
-      def sole_multiton_reject_recursive_initialization!(key)
-        return unless sole_multiton_initializing_keys.key?(key)
+      def singulus_multiton_reject_recursive_initialization!(key)
+        return unless singulus_multiton_initializing_keys.key?(key)
 
         raise Internal::RecursiveInitializationError,
               "recursive Multiton initialization detected for key #{key.inspect} on #{self}"
       end
 
-      def sole_multiton_assert_registry_empty!(setting)
+      def singulus_multiton_assert_registry_empty!(setting)
         return if instance_count.zero?
 
         raise Internal::ConfigurationLockedError,

@@ -1,21 +1,21 @@
 # frozen_string_literal: true
 
-module Sole
+module Singulus
   module Internal
     module ConstructorGuard
       private
 
       def new(...)
-        sole_reject_unauthorized_constructor!(:new)
+        singulus_reject_unauthorized_constructor!(:new)
         super
       end
 
       def allocate
-        sole_reject_unauthorized_constructor!(:allocate)
+        singulus_reject_unauthorized_constructor!(:allocate)
         super
       end
 
-      def sole_reject_unauthorized_constructor!(method_name)
+      def singulus_reject_unauthorized_constructor!(method_name)
         return unless Internal.locally_hardened?(self)
         return if Internal.constructor_access_allowed?(self)
 

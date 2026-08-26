@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module Sole
+module Singulus
   module Internal
     module RuntimeHardening
       REFLECTION_GATEWAYS = %i[
@@ -14,31 +14,31 @@ module Sole
 
       module UnboundMethodGuard
         def bind(object)
-          sole_reject_binding!(object)
+          singulus_reject_binding!(object)
           super
         end
 
         def bind_call(object, *args, &)
-          sole_reject_bind_call!(object, args)
+          singulus_reject_bind_call!(object, args)
           super
         end
 
         private
 
-        def sole_reject_binding!(object)
+        def singulus_reject_binding!(object)
           return unless Internal.runtime_hardened?(object)
           return unless Internal.constructor_name?(name) || RuntimeHardening.reflection_gateway?(name)
 
           raise ConstructorAccessError,
-                "cannot bind #{owner}##{name} to runtime-hardened Sole #{object}"
+                "cannot bind #{owner}##{name} to runtime-hardened Singulus #{object}"
         end
 
-        def sole_reject_bind_call!(object, args)
+        def singulus_reject_bind_call!(object, args)
           return unless Internal.runtime_hardened?(object)
 
           if Internal.constructor_name?(name)
             raise ConstructorAccessError,
-                  "cannot invoke constructor #{owner}##{name} on runtime-hardened Sole #{object}"
+                  "cannot invoke constructor #{owner}##{name} on runtime-hardened Singulus #{object}"
           end
 
           return unless RuntimeHardening.reflection_gateway?(name)
@@ -46,44 +46,44 @@ module Sole
 
           raise ConstructorAccessError,
                 "cannot use #{owner}##{name} to access constructor #{args.first.inspect} " \
-                "on runtime-hardened Sole #{object}"
+                "on runtime-hardened Singulus #{object}"
         end
       end
 
       module MethodGuard
         def call(*args, &)
-          sole_reject_invocation!(args)
+          singulus_reject_invocation!(args)
           super
         end
 
         def [](*args, &)
-          sole_reject_invocation!(args)
+          singulus_reject_invocation!(args)
           super
         end
 
         def to_proc
-          sole_reject_transformation!
+          singulus_reject_transformation!
           super
         end
 
         def >>(other)
-          sole_reject_transformation!
+          singulus_reject_transformation!
           super
         end
 
         def <<(other)
-          sole_reject_transformation!
+          singulus_reject_transformation!
           super
         end
 
         private
 
-        def sole_reject_invocation!(args)
+        def singulus_reject_invocation!(args)
           return unless Internal.runtime_hardened?(receiver)
 
           if Internal.constructor_name?(name)
             raise ConstructorAccessError,
-                  "constructor #{name.inspect} cannot be invoked for runtime-hardened Sole #{receiver}"
+                  "constructor #{name.inspect} cannot be invoked for runtime-hardened Singulus #{receiver}"
           end
 
           return unless RuntimeHardening.reflection_gateway?(name)
@@ -91,15 +91,15 @@ module Sole
 
           raise ConstructorAccessError,
                 "#{name} cannot be used to access constructor #{args.first.inspect} " \
-                "for runtime-hardened Sole #{receiver}"
+                "for runtime-hardened Singulus #{receiver}"
         end
 
-        def sole_reject_transformation!
+        def singulus_reject_transformation!
           return unless Internal.runtime_hardened?(receiver)
           return unless Internal.constructor_name?(name) || RuntimeHardening.reflection_gateway?(name)
 
           raise ConstructorAccessError,
-                "Method #{name.inspect} for runtime-hardened Sole #{receiver} " \
+                "Method #{name.inspect} for runtime-hardened Singulus #{receiver} " \
                 "cannot be converted or composed"
         end
       end

@@ -2,7 +2,7 @@
 
 require "simplecov" if ENV.fetch("COVERAGE", "true") == "true"
 
-require "sole"
+require "singulus"
 
 RSpec.configure do |config|
   config.order = :random

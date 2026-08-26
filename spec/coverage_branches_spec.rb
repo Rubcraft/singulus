@@ -2,15 +2,15 @@
 
 require "spec_helper"
 
-RSpec.describe "Sole branch coverage contracts" do
+RSpec.describe "Singulus branch coverage contracts" do
   after do
-    Sole.reset_configuration!
+    Singulus.reset_configuration!
   end
 
   describe "standard-mode fallthrough behavior" do
     it "falls through to Ruby Singleton duplication semantics in standard mode" do
       klass = Class.new do
-        include Sole::Singleton.with(:standard)
+        include Singulus::Singleton.with(:standard)
       end
 
       instance = klass.instance
@@ -21,7 +21,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "preserves clone keyword forwarding for ordinary Multiton instances" do
       klass = Class.new do
-        include Sole::Multiton.with(:standard)
+        include Singulus::Multiton.with(:standard)
 
         def initialize(identifier)
           @identifier = identifier
@@ -35,9 +35,9 @@ RSpec.describe "Sole branch coverage contracts" do
       expect(cloned).not_to be_frozen
     end
 
-    it "does not apply Sole duplication rejection in standard Multiton mode" do
+    it "does not apply Singulus duplication rejection in standard Multiton mode" do
       klass = Class.new do
-        include Sole::Multiton.with(:standard)
+        include Singulus::Multiton.with(:standard)
 
         def initialize(identifier)
           @identifier = identifier
@@ -52,7 +52,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "allows constructor mutation logic to fall through in standard mode" do
       klass = Class.new do
-        include Sole::Multiton.with(:standard)
+        include Singulus::Multiton.with(:standard)
 
         def initialize(identifier)
           @identifier = identifier
@@ -70,7 +70,7 @@ RSpec.describe "Sole branch coverage contracts" do
   describe "reflection guard fallthroughs" do
     it "allows non-constructor reflection on a hardened Multiton" do
       klass = Class.new do
-        include Sole::Multiton
+        include Singulus::Multiton
 
         def self.health
           :ok
@@ -90,7 +90,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "allows reflective constructor access in standard Multiton mode" do
       klass = Class.new do
-        include Sole::Multiton.with(:standard)
+        include Singulus::Multiton.with(:standard)
 
         attr_reader :identifier
 
@@ -112,16 +112,16 @@ RSpec.describe "Sole branch coverage contracts" do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
 
-      plain.include Sole::Singleton
+      plain.include Singulus::Singleton
 
-      plain.sole mode: :strict
+      plain.singulus mode: :strict
 
       expect { captured.call }.not_to raise_error
     end
 
     it "does not block constructor UnboundMethod binding to a strict non-runtime class" do
       klass = Class.new do
-        include Sole::Singleton.with(:strict)
+        include Singulus::Singleton.with(:strict)
       end
 
       constructor = Class.instance_method(:new)
@@ -131,7 +131,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "does not block composition of a safe Method on a runtime class" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
 
         def self.echo(value)
           value
@@ -147,7 +147,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "allows binding a safe non-gateway UnboundMethod to a runtime class" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
       end
 
       safe_unbound = Module.instance_method(:name)
@@ -158,19 +158,19 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "still blocks binding reflection gateways even when the eventual target could be safe" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
       end
 
       gateway = Object.instance_method(:method)
 
-      expect { gateway.bind(klass) }.to raise_error(Sole::Error)
+      expect { gateway.bind(klass) }.to raise_error(Singulus::Error)
     end
   end
 
   describe "additional runtime branch contracts" do
     it "allows safe UnboundMethod bind_call on a runtime class" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
       end
 
       safe_unbound = Module.instance_method(:name)
@@ -180,7 +180,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "allows safe Method transformations on a strict non-runtime class" do
       klass = Class.new do
-        include Sole::Singleton.with(:strict)
+        include Singulus::Singleton.with(:strict)
 
         def self.echo(value)
           value
@@ -197,7 +197,7 @@ RSpec.describe "Sole branch coverage contracts" do
 
     it "allows a runtime Method gateway call when the requested method is not a constructor" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
 
         def self.health
           :ok
@@ -212,8 +212,8 @@ RSpec.describe "Sole branch coverage contracts" do
 
   describe "configuration edge cases" do
     it "keeps configuration reset idempotent" do
-      first = Sole.reset_configuration!
-      second = Sole.reset_configuration!
+      first = Singulus.reset_configuration!
+      second = Singulus.reset_configuration!
 
       expect(first.default_mode).to eq(:strict)
       expect(second.default_mode).to eq(:strict)
@@ -224,7 +224,7 @@ RSpec.describe "Sole branch coverage contracts" do
   describe "Multiton retention branches" do
     def multiton
       Class.new do
-        include Sole::Multiton
+        include Singulus::Multiton
 
         def initialize(identifier)
           @identifier = identifier

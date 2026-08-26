@@ -4,33 +4,33 @@ require "singleton"
 require "monitor"
 require "weakref"
 
-require_relative "sole/version"
-require_relative "sole/internal/errors"
-require_relative "sole/internal/configuration"
-require_relative "sole/internal/instance_guard"
-require_relative "sole/internal/constructor_guard"
-require_relative "sole/internal/reflection_guard"
-require_relative "sole/internal/mutation_guard"
-require_relative "sole/internal/singleton_class_methods"
-require_relative "sole/internal/runtime_hardening"
-require_relative "sole/multiton"
+require_relative "singulus/version"
+require_relative "singulus/internal/errors"
+require_relative "singulus/internal/configuration"
+require_relative "singulus/internal/instance_guard"
+require_relative "singulus/internal/constructor_guard"
+require_relative "singulus/internal/reflection_guard"
+require_relative "singulus/internal/mutation_guard"
+require_relative "singulus/internal/singleton_class_methods"
+require_relative "singulus/internal/runtime_hardening"
+require_relative "singulus/multiton"
 
-module Sole
+module Singulus
   module Internal
     CONSTRUCTORS = %i[new allocate].freeze
 
-    MARKER_IVAR = :@__sole_managed_class__
-    KIND_IVAR = :@__sole_kind__
-    MODE_IVAR = :@__sole_mode__
+    MARKER_IVAR = :@__singulus_managed_class__
+    KIND_IVAR = :@__singulus_kind__
+    MODE_IVAR = :@__singulus_mode__
 
     class << self
-      def install_singleton!(base, mode: Sole.configuration.default_mode)
+      def install_singleton!(base, mode: Singulus.configuration.default_mode)
         base.include ::Singleton
         base.include InstanceGuard
 
         initialize_managed_class!(base, kind: :singleton, mode: mode)
-        base.instance_variable_set(:@__sole_seal_mutex__, Thread::Mutex.new)
-        base.instance_variable_set(:@__sole_sealed__, false)
+        base.instance_variable_set(:@__singulus_seal_mutex__, Thread::Mutex.new)
+        base.instance_variable_set(:@__singulus_sealed__, false)
 
         base.singleton_class.prepend ReflectionGuard
         base.singleton_class.prepend MutationGuard
@@ -52,7 +52,7 @@ module Sole
         object.is_a?(Class) && object.instance_variable_get(MARKER_IVAR) == true
       end
 
-      alias sole_class? managed_class?
+      alias singulus_class? managed_class?
 
       def kind_for(klass)
         return unless managed_class?(klass)
@@ -67,13 +67,13 @@ module Sole
       end
 
       def set_mode!(klass, mode)
-        raise ArgumentError, "#{klass} is not managed by Sole" unless managed_class?(klass)
+        raise ArgumentError, "#{klass} is not managed by Singulus" unless managed_class?(klass)
 
         normalized_mode = normalize_mode!(mode)
         current_mode = mode_for(klass)
 
         if kind_for(klass) == :singleton && current_mode != :standard && normalized_mode == :standard &&
-           klass.instance_variable_get(:@__sole_sealed__)
+           klass.instance_variable_get(:@__singulus_sealed__)
           raise InvalidModeError,
                 "cannot downgrade #{klass} to :standard after its constructors have been sealed"
         end
@@ -92,7 +92,7 @@ module Sole
       end
 
       def sealed_singleton?(klass)
-        kind_for(klass) == :singleton && klass.instance_variable_get(:@__sole_sealed__) == true
+        kind_for(klass) == :singleton && klass.instance_variable_get(:@__singulus_sealed__) == true
       end
 
       def constructor_name?(method_name)
@@ -106,19 +106,19 @@ module Sole
       end
 
       def constructor_access_allowed?(klass)
-        permissions = Thread.current[:__sole_constructor_permissions__]
+        permissions = Thread.current[:__singulus_constructor_permissions__]
         permissions && permissions[klass].to_i.positive?
       end
 
       def with_constructor_access(klass)
-        permissions = (Thread.current[:__sole_constructor_permissions__] ||= {})
+        permissions = (Thread.current[:__singulus_constructor_permissions__] ||= {})
         permissions[klass] = permissions[klass].to_i + 1
         yield
       ensure
         if permissions
           permissions[klass] = permissions[klass].to_i - 1
           permissions.delete(klass) unless permissions[klass].to_i.positive?
-          Thread.current[:__sole_constructor_permissions__] = nil if permissions.empty?
+          Thread.current[:__singulus_constructor_permissions__] = nil if permissions.empty?
         end
       end
 
@@ -129,7 +129,7 @@ module Sole
         return normalized_mode if Configuration::MODES.include?(normalized_mode)
 
         raise InvalidModeError,
-              "invalid Sole mode #{mode.inspect}; expected one of: #{Configuration::MODES.join(', ')}"
+              "invalid Singulus mode #{mode.inspect}; expected one of: #{Configuration::MODES.join(', ')}"
       end
     end
   end
@@ -169,7 +169,7 @@ module Sole
           raise ArgumentError, "unknown Singleton options: #{options.keys.map(&:inspect).join(', ')}"
         end
 
-        resolved_mode ||= mode || Sole.configuration.default_mode
+        resolved_mode ||= mode || Singulus.configuration.default_mode
 
         Module.new do
           define_singleton_method(:included) do |base|

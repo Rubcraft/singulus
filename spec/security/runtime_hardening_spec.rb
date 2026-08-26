@@ -5,9 +5,9 @@ require "spec_helper"
 RSpec.describe "runtime hardening" do
   def runtime_multiton
     Class.new do
-      include Sole::Multiton
+      include Singulus::Multiton
 
-      sole mode: :runtime
+      singulus mode: :runtime
 
       def initialize(identifier)
         @identifier = identifier
@@ -20,9 +20,9 @@ RSpec.describe "runtime hardening" do
     constructor = Class.instance_method(:new)
     allocator = Class.instance_method(:allocate)
 
-    expect { constructor.bind(klass) }.to raise_error(Sole::Error)
-    expect { constructor.bind_call(klass, 1) }.to raise_error(Sole::Error)
-    expect { allocator.bind(klass) }.to raise_error(Sole::Error)
+    expect { constructor.bind(klass) }.to raise_error(Singulus::Error)
+    expect { constructor.bind_call(klass, 1) }.to raise_error(Singulus::Error)
+    expect { allocator.bind(klass) }.to raise_error(Singulus::Error)
   end
 
   it "blocks captured reflection gateways" do
@@ -31,9 +31,9 @@ RSpec.describe "runtime hardening" do
     original_send = BasicObject.instance_method(:__send__)
 
     expect { original_method.bind_call(klass, :new) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
     expect { original_send.bind_call(klass, :allocate) }
-      .to raise_error(Sole::Error)
+      .to raise_error(Singulus::Error)
   end
 
   it "blocks a Method captured before the class becomes runtime hardened" do
@@ -44,11 +44,11 @@ RSpec.describe "runtime hardening" do
     end
     captured = Class.instance_method(:new).bind(klass)
 
-    klass.include Sole::Multiton
-    klass.sole mode: :runtime
+    klass.include Singulus::Multiton
+    klass.singulus mode: :runtime
 
-    expect { captured.call(1) }.to raise_error(Sole::Error)
-    expect { captured[1] }.to raise_error(Sole::Error)
-    expect { captured.to_proc }.to raise_error(Sole::Error)
+    expect { captured.call(1) }.to raise_error(Singulus::Error)
+    expect { captured[1] }.to raise_error(Singulus::Error)
+    expect { captured.to_proc }.to raise_error(Singulus::Error)
   end
 end

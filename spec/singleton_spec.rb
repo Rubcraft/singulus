@@ -2,12 +2,12 @@
 
 require "spec_helper"
 
-RSpec.describe Sole do
+RSpec.describe Singulus do
   def build_class(mode: :strict, &block)
     Class.new do
-      include Sole::Singleton
+      include Singulus::Singleton
 
-      sole mode: mode
+      singulus mode: mode
       class_eval(&block) if block
     end
   end
@@ -33,30 +33,30 @@ RSpec.describe Sole do
     end
 
     it "blocks reflective constructor capture before instance" do
-      expect { klass.method(:new) }.to raise_error(Sole::Error)
-      expect { klass.method(:allocate) }.to raise_error(Sole::Error)
+      expect { klass.method(:new) }.to raise_error(Singulus::Error)
+      expect { klass.method(:allocate) }.to raise_error(Singulus::Error)
     end
 
     it "blocks send and __send__ before instance" do
-      expect { klass.send(:new) }.to raise_error(Sole::Error)
-      expect { klass.__send__(:allocate) }.to raise_error(Sole::Error)
+      expect { klass.send(:new) }.to raise_error(Singulus::Error)
+      expect { klass.__send__(:allocate) }.to raise_error(Singulus::Error)
     end
 
     it "seals constructors after instance" do
       klass.instance
 
-      expect { klass.send(:new) }.to raise_error(Sole::Error)
-      expect { klass.__send__(:allocate) }.to raise_error(Sole::Error)
+      expect { klass.send(:new) }.to raise_error(Singulus::Error)
+      expect { klass.__send__(:allocate) }.to raise_error(Singulus::Error)
     end
 
     it "prevents redefining constructors" do
       expect do
         klass.define_singleton_method(:new) { :bypass }
-      end.to raise_error(Sole::Error)
+      end.to raise_error(Singulus::Error)
     end
 
     it "prevents inheritance" do
-      expect { Class.new(klass) }.to raise_error(Sole::Error)
+      expect { Class.new(klass) }.to raise_error(Singulus::Error)
     end
 
     it "remains thread-safe" do
@@ -72,17 +72,17 @@ RSpec.describe Sole do
       constructor = Class.instance_method(:new)
 
       expect { constructor.bind(klass) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
 
       expect { constructor.bind_call(klass) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "blocks Class#allocate obtained as an UnboundMethod" do
       allocator = Class.instance_method(:allocate)
 
       expect { allocator.bind(klass) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "blocks binding reflection gateways to the protected class" do
@@ -90,10 +90,10 @@ RSpec.describe Sole do
       original_send = BasicObject.instance_method(:__send__)
 
       expect { original_method.bind(klass) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
 
       expect { original_send.bind(klass) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "blocks bind_call through reflection gateways when accessing constructors" do
@@ -101,32 +101,32 @@ RSpec.describe Sole do
       original_send = BasicObject.instance_method(:__send__)
 
       expect { original_method.bind_call(klass, :new) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
 
       expect { original_send.bind_call(klass, :allocate) }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "blocks previously captured constructor Method invocation" do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
-      plain.include Sole::Singleton
+      plain.include Singulus::Singleton
 
-      plain.sole mode: :runtime
+      plain.singulus mode: :runtime
 
       expect { captured.call }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
 
     it "blocks turning dangerous Method objects into Proc objects" do
       plain = Class.new
       captured = Class.instance_method(:new).bind(plain)
-      plain.include Sole::Singleton
+      plain.include Singulus::Singleton
 
-      plain.sole mode: :runtime
+      plain.singulus mode: :runtime
 
       expect { captured.to_proc }
-        .to raise_error(Sole::Error)
+        .to raise_error(Singulus::Error)
     end
   end
 
@@ -142,55 +142,55 @@ RSpec.describe Sole do
     it "can make runtime mode the default" do
       described_class.configure { |config| config.default_mode = :runtime }
 
-      klass = Class.new { include Sole::Singleton }
+      klass = Class.new { include Singulus::Singleton }
 
-      expect(klass.sole_mode).to eq(:runtime)
+      expect(klass.singulus_mode).to eq(:runtime)
     end
 
     it "rejects invalid modes" do
       expect do
         described_class.configure { |config| config.default_mode = :unknown }
-      end.to raise_error(Sole::Error)
+      end.to raise_error(Singulus::Error)
     end
   end
 
   describe ".with" do
     it "configures the mode directly from include" do
       klass = Class.new do
-        include Sole::Singleton.with(:runtime)
+        include Singulus::Singleton.with(:runtime)
       end
 
-      expect(klass.sole_mode).to eq(:runtime)
+      expect(klass.singulus_mode).to eq(:runtime)
     end
 
     it "accepts the keyword form" do
       klass = Class.new do
-        include Sole::Singleton.with(mode: :standard)
+        include Singulus::Singleton.with(mode: :standard)
       end
 
-      expect(klass.sole_mode).to eq(:standard)
+      expect(klass.singulus_mode).to eq(:standard)
     end
 
     it "keeps configured includes independent" do
       strict_class = Class.new do
-        include Sole::Singleton.with(:strict)
+        include Singulus::Singleton.with(:strict)
       end
 
       standard_class = Class.new do
-        include Sole::Singleton.with(:standard)
+        include Singulus::Singleton.with(:standard)
       end
 
-      expect(strict_class.sole_mode).to eq(:strict)
-      expect(standard_class.sole_mode).to eq(:standard)
+      expect(strict_class.singulus_mode).to eq(:strict)
+      expect(standard_class.singulus_mode).to eq(:standard)
     end
 
     it "rejects ambiguous mode arguments" do
-      expect { Sole::Singleton.with(:strict, mode: :runtime) }
+      expect { Singulus::Singleton.with(:strict, mode: :runtime) }
         .to raise_error(ArgumentError)
     end
 
     it "rejects unsupported options" do
-      expect { Sole::Singleton.with(foo: :bar) }
+      expect { Singulus::Singleton.with(foo: :bar) }
         .to raise_error(ArgumentError)
     end
   end

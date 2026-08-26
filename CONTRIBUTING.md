@@ -1,6 +1,6 @@
-# Contributing to Sole
+# Contributing to Singulus
 
-Thanks for helping improve Sole.
+Thanks for helping improve Singulus.
 
 ## Development
 
