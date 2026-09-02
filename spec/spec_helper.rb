@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
-require "simplecov" if ENV.fetch("COVERAGE", "true") == "true"
+if ENV["COVERAGE"] == "true"
+  require "simplecov"
+  SimpleCov.start
+end
 
 require "singulus"
 

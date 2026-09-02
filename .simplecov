@@ -1,16 +1,17 @@
 # frozen_string_literal: true
 
-SimpleCov.start do
+require "simplecov"
+
+SimpleCov.configure do
+  skip "/spec/"
+  skip "/vendor/"
+
+  group "Core", "lib/singulus.rb"
+  group "Components", "lib/singulus"
+
+  cover "lib/**/*.rb"
+
   enable_coverage :branch
-  primary_coverage :line
-
-  add_filter "/spec/"
-  add_filter "/vendor/"
-
-  add_group "Core", "lib/singulus.rb"
-  add_group "Components", "lib/singulus"
-
-  track_files "lib/**/*.rb"
 
   minimum_coverage line: 95, branch: 90
 end
