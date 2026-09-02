@@ -46,9 +46,7 @@ jobs:
       - name: Run RuboCop
         run: bundle exec rubocop --parallel --config .rubocop.yml --config .rubocop.yml
 
-      - name: Run specs with coverage
-        env:
-          COVERAGE: "true"
+      - name: Run specs
         run: bundle exec rspec
 
       - name: Build gem

@@ -2,8 +2,12 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -14,6 +18,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -22,17 +28,24 @@ jobs:
           bundler-cache: true
 
       - name: Run RuboCop
-        run: bundle exec rubocop --parallel --config .rubocop.yml --config .rubocop.yml
+        run: bundle exec rubocop --parallel
 
   test:
     runs-on: ubuntu-latest
+
     strategy:
       fail-fast: false
       matrix:
-        ruby-version: ["3.2", "3.3", "3.4", "4.0"]
+        ruby-version:
+          - "3.2"
+          - "3.3"
+          - "3.4"
+          - "4.0"
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -40,10 +53,27 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
 
-      - name: Run specs with coverage
-        env:
-          COVERAGE: "true"
+      - name: Run specs
         run: bundle exec rspec
 
       - name: Build gem
         run: bundle exec rake build
+
+  coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Run specs with coverage
+        env:
+          COVERAGE: "true"
+        run: bundle exec rspec
