@@ -15,7 +15,19 @@ require_relative "singulus/internal/singleton_class_methods"
 require_relative "singulus/internal/runtime_hardening"
 require_relative "singulus/multiton"
 
+# Configurable Singleton and keyed Multiton patterns for a Ruby process.
+#
+# Require `singulus`, then include {Singleton} or {Multiton} in a class.
+# The default mode is `:strict`; `:standard` relaxes local guards and
+# `:runtime` adds process-wide Method/UnboundMethod guards for managed classes.
+# Runtime hardening is not a sandbox for code running in the same process.
+#
+# @see Singleton
+# @see Multiton
+# @see Error
 module Singulus
+  # Implementation details; not a supported public namespace.
+  # @private
   module Internal
     CONSTRUCTORS = %i[new allocate].freeze
 
@@ -137,10 +149,37 @@ module Singulus
   private_constant :Internal
 
   class << self
+    # Returns the mutable process-wide defaults for subsequently installed classes.
+    #
+    # Use the returned object's `default_mode` reader and `default_mode=` writer;
+    # its concrete class is private. The reader returns a Symbol. The writer accepts
+    # `:standard`, `:strict`, `:runtime`, or their String forms, and raises
+    # {Error} for invalid modes. Existing managed classes keep their mode.
+    # Setting the writer directly does not install runtime guards until a runtime
+    # class is installed; use {configure} to enable them immediately.
+    #
+    # @return [#default_mode, #default_mode=] shared configuration object
+    # @example Read the default
+    #   Singulus.configuration.default_mode # => :strict
     def configuration
       @configuration ||= Internal::Configuration.new
     end
 
+    # Yields the shared configuration and enables runtime guards when requested.
+    #
+    # Configure during application boot, before defining managed classes or
+    # capturing constructor references. Runtime patches are installed once and
+    # remain installed for the life of the process. Exceptions from the block
+    # propagate; changes already made to the configuration are not rolled back.
+    #
+    # @yield [config] changes defaults for future class installations
+    # @yieldparam config [#default_mode, #default_mode=] mutable configuration
+    # @yieldreturn [Object] ignored
+    # @return [#default_mode, #default_mode=] shared configuration after the block
+    # @raise [ArgumentError] if no block is given
+    # @raise [Error] if the block assigns an unsupported default mode
+    # @example Enable runtime hardening during boot
+    #   Singulus.configure { |config| config.default_mode = :runtime }
     def configure
       raise ArgumentError, "a block is required" unless block_given?
 
@@ -149,17 +188,82 @@ module Singulus
       configuration
     end
 
+    # Replaces the shared configuration with a new object in `:strict` mode.
+    #
+    # Does not change existing classes, clear instances, or uninstall runtime
+    # patches. Previously returned configuration objects are no longer shared.
+    #
+    # @return [#default_mode, #default_mode=] new configuration object
     def reset_configuration!
       @configuration = Internal::Configuration.new
     end
   end
 
+  # Provides one lazily initialized, thread-safe instance per class and process.
+  #
+  # Include this module and call `.instance` on the including class. Construction
+  # uses a zero-argument initializer. In strict/runtime modes constructors are
+  # sealed after the first successful access, and duplication and inheritance
+  # raise {Error}. Standard mode delegates singleton semantics to Ruby Singleton,
+  # which rejects instance duplication with TypeError.
+  #
+  # Methods documented below as class methods are installed on the including
+  # class, except {.with}, which is called on this module.
+  #
+  # @example Share one service
+  #   class Settings
+  #     include Singulus::Singleton
+  #   end
+  #   Settings.instance.equal?(Settings.instance) # => true
   module Singleton
+    # @!method self.instance
+    #   Returns the class's shared instance, constructing it once if needed.
+    #
+    #   Initialization is synchronized by Ruby Singleton. Initializer exceptions
+    #   propagate and construction can be retried. Strict/runtime modes seal
+    #   constructors after successful access. Recursive `.instance` calls from the
+    #   initializer are unsupported by Ruby Singleton.
+    #
+    #   @return [Object] instance of the receiving class
+
+    # @!method self.singulus(mode:)
+    #   Changes this class's hardening mode.
+    #
+    #   Switching to runtime installs process-wide guards. Switching away does not
+    #   uninstall them. A sealed Singleton cannot downgrade to standard mode.
+    #
+    #   @param mode [Symbol, String] :standard, :strict, or :runtime
+    #   @return [Class] receiving class for chaining
+    #   @raise [Error] for an invalid mode or a downgrade after constructor sealing
+
+    # @!method self.singulus_mode
+    #   Returns this class's current hardening mode.
+    #   @return [Symbol] :standard, :strict, or :runtime
+
+    # Inclusion helpers for the public mixin.
     class << self
+      # Installs the pattern when Ruby evaluates `include`.
+      # @private
       def included(base)
         Internal.install_singleton!(base)
       end
 
+      # Builds an independent module with an include-time hardening mode.
+      #
+      # The default is captured when this method is called. Mode validation occurs
+      # when the returned module is included in a class.
+      #
+      # @param mode [Symbol, String, nil] :standard, :strict, or :runtime;
+      #   nil uses the configured default
+      # @param options [Hash] keyword form of the mode
+      # @option options [Symbol, String] :mode alternative to positional mode
+      # @return [Module] module to include in the managed class
+      # @raise [ArgumentError] if both mode forms or unknown options are supplied
+      # @raise [Error] on inclusion if the resolved mode is unsupported
+      # @example Select a mode for one class
+      #   class Settings
+      #     include Singulus::Singleton.with(mode: :runtime)
+      #   end
       def with(mode = nil, **options)
         resolved_mode = options.delete(:mode)
 

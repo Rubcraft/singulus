@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.metadata["changelog_uri"] = "https://github.com/Rubcraft/singulus/blob/main/CHANGELOG.md"
 
   spec.files = Dir.chdir(__dir__) do
-    Dir["lib/**/*", "README.md", "CHANGELOG.md", "LICENSE.txt"]
+    Dir["lib/**/*", "README.md", "CHANGELOG.md", "LICENSE.txt", ".yardopts"]
   end
 
   spec.require_paths = ["lib"]

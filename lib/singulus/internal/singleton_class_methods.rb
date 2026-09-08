@@ -3,6 +3,7 @@
 module Singulus
   module Internal
     module SingletonClassMethods
+      # See {Singulus::Singleton.instance} for the public contract.
       def instance
         return super unless Internal.locally_hardened?(self)
 
@@ -11,11 +12,13 @@ module Singulus
         instance
       end
 
+      # See {Singulus::Singleton.singulus} for the public contract.
       def singulus(mode:)
         Internal.set_mode!(self, mode)
         self
       end
 
+      # See {Singulus::Singleton.singulus_mode} for the public contract.
       def singulus_mode
         Internal.mode_for(self)
       end

@@ -6,6 +6,18 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-08
+
+### Changed
+
+- Organized specs by configuration, Singleton, Multiton lifecycle, retention, and runtime security responsibilities.
+- Fixed the Multiton test helper to apply the requested mode without requiring a retention strategy.
+
+### Added
+
+- YARD reference for configuration, Singleton and Multiton APIs, with types, errors, lifecycle semantics, and examples.
+- Local documentation task and CI generation with warnings treated as failures.
+
 ### Fixed
 
 - Completed the final RuboCop cleanup across Multiton and specs.
@@ -73,5 +85,6 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - Protect common reflective constructor access paths.
 - Protect captured `Method` and `UnboundMethod` paths in `:runtime` mode.
 
-[Unreleased]: https://github.com/Rubcraft/singulus/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Rubcraft/singulus/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Rubcraft/singulus/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Rubcraft/singulus/releases/tag/v0.1.0

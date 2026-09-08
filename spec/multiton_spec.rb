@@ -2,14 +2,25 @@
 
 require "spec_helper"
 
+# Keyed identity, lifecycle, argument forwarding, and class-level policy.
 RSpec.describe Singulus::Multiton do
-  def build_multiton(mode: :strict, retention: nil, ttl: nil, max_size: nil, &block)
-    Class.new do
-      include Singulus::Multiton
+  include MultitonHelpers
 
-      singulus mode: mode, retention: retention, ttl: ttl, max_size: max_size if retention
-      class_eval(&block) if block
+  after do
+    Singulus.reset_configuration!
+  end
+
+  it "allows standard-mode duplication without an explicit retention strategy" do
+    klass = build_multiton(mode: :standard) do
+      def initialize(identifier)
+        @identifier = identifier
+      end
     end
+
+    instance = klass.instance_for(:tenant)
+
+    expect(klass.singulus_mode).to eq(:standard)
+    expect(instance.dup).not_to equal(instance)
   end
 
   it "returns one instance per key" do
@@ -104,62 +115,6 @@ RSpec.describe Singulus::Multiton do
 
     expect(klass.clear_instances).to eq(2)
     expect(klass.instance_count).to eq(0)
-  end
-
-  it "supports LRU retention" do
-    klass = build_multiton(retention: :lru, max_size: 2) do
-      def initialize(identifier)
-        @identifier = identifier
-      end
-    end
-
-    klass.instance_for(1)
-    klass.instance_for(2)
-    klass.instance_for(1)
-    klass.instance_for(3)
-
-    expect(klass.instance_keys).to eq([1, 3])
-  end
-
-  it "supports TTL retention without sleeping" do
-    klass = build_multiton(retention: :ttl, ttl: 60) do
-      def initialize(identifier)
-        @identifier = identifier
-      end
-    end
-
-    allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(100.0, 100.0, 200.0, 200.0)
-
-    first = klass.instance_for(1)
-    second = klass.instance_for(1)
-
-    expect(second).not_to equal(first)
-  end
-
-  it "rejects invalid retention options" do
-    expect { build_multiton(retention: :ttl) }
-      .to raise_error(Singulus::Error)
-
-    expect { build_multiton(retention: :lru, max_size: 0) }
-      .to raise_error(Singulus::Error)
-
-    expect { build_multiton(retention: :forever, ttl: 1) }
-      .to raise_error(Singulus::Error)
-  end
-
-  it "locks key and retention configuration once instances exist" do
-    klass = build_multiton do
-      def initialize(identifier)
-        @identifier = identifier
-      end
-    end
-
-    klass.instance_for(1)
-
-    expect { klass.multiton_key(&:to_s) }
-      .to raise_error(Singulus::Error)
-    expect { klass.multiton_retention(:lru, max_size: 10) }
-      .to raise_error(Singulus::Error)
   end
 
   it "detects recursive initialization for the same key" do
@@ -275,54 +230,169 @@ RSpec.describe Singulus::Multiton do
     end
   end
 
-  describe "advanced retention" do
-    it "rejects max_size with ttl and points to bounded" do
-      expect { build_multiton(retention: :ttl, ttl: 60, max_size: 3) }
-        .to raise_error(Singulus::Error, /:bounded/)
-    end
+  describe "registry edge behavior" do
+    it "uses the configured default mode when .with has no explicit mode" do
+      Singulus.configure { |config| config.default_mode = :standard }
 
-    it "rejects ttl with lru and points to bounded" do
-      expect { build_multiton(retention: :lru, ttl: 60, max_size: 3) }
-        .to raise_error(Singulus::Error, /:bounded/)
-    end
+      klass = Class.new do
+        include Singulus::Multiton.with
 
-    it "supports bounded retention with TTL and LRU limits" do
-      klass = build_multiton(retention: :bounded, ttl: 60, max_size: 2) do
         def initialize(identifier)
           @identifier = identifier
         end
       end
 
-      allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(100.0)
-      klass.instance_for(1)
-      klass.instance_for(2)
-      klass.instance_for(1)
-      klass.instance_for(3)
-
-      expect(klass.instance_keys).to eq([1, 3])
-
-      allow(klass).to receive(:singulus_multiton_monotonic_time).and_return(200.0)
-      expect(klass.instance_count).to eq(0)
+      expect(klass.singulus_mode).to eq(:standard)
     end
 
-    it "requires both ttl and max_size for bounded retention" do
-      expect { build_multiton(retention: :bounded, ttl: 60) }
-        .to raise_error(Singulus::Error)
-      expect { build_multiton(retention: :bounded, max_size: 3) }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "supports weak retention without accepting ttl or max_size" do
-      klass = build_multiton(retention: :weak) do
+    it "reports absence and deletion of a missing identifier" do
+      klass = build_multiton do
         def initialize(identifier)
           @identifier = identifier
         end
       end
 
-      first = klass.instance_for(1)
-      expect(klass.instance_for(1)).to equal(first)
-      expect { klass.multiton_retention(:weak, ttl: 1) }
-        .to raise_error(Singulus::Error)
+      expect(klass.instance?(:missing)).to be(false)
+      expect(klass.delete_instance(:missing)).to be_nil
+      expect(klass.clear_instances).to eq(0)
     end
+
+    it "forwards additional positional arguments, keyword arguments and a block once" do
+      klass = build_multiton do
+        attr_reader :payload
+
+        def initialize(identifier, extra, flag:)
+          @payload = [identifier, extra, flag, yield]
+        end
+      end
+
+      first = klass.instance_for(:id, "extra", flag: true) { :from_block }
+      second = klass.instance_for(:id, "ignored", flag: false) { :ignored }
+
+      expect(first.payload).to eq([:id, "extra", true, :from_block])
+      expect(second).to equal(first)
+    end
+
+    it "permits inheritance in standard mode and initializes an independent child registry" do
+      parent = build_multiton(mode: :standard) do
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+      child = Class.new(parent)
+
+      parent_instance = parent.instance_for(1)
+      child_instance = child.instance_for(1)
+
+      expect(child_instance).to be_a(child)
+      expect(child_instance).not_to equal(parent_instance)
+      expect(parent.instance_count).to eq(1)
+      expect(child.instance_count).to eq(1)
+    end
+  end
+
+  describe "standard-mode operations" do
+    it "preserves clone keyword forwarding for ordinary Multiton instances" do
+      klass = Class.new do
+        include Singulus::Multiton.with(:standard)
+
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+
+      instance = klass.instance_for(1)
+      cloned = instance.clone(freeze: false)
+
+      expect(cloned).to be_a(klass)
+      expect(cloned).not_to be_frozen
+    end
+
+    it "does not apply Singulus duplication rejection in standard Multiton mode" do
+      klass = Class.new do
+        include Singulus::Multiton.with(:standard)
+
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+
+      instance = klass.instance_for(1)
+
+      expect { instance.dup }.not_to raise_error
+      expect { instance.clone }.not_to raise_error
+    end
+
+    it "allows constructor mutation logic to fall through in standard mode" do
+      klass = Class.new do
+        include Singulus::Multiton.with(:standard)
+
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+
+      expect do
+        klass.define_singleton_method(:new) do |identifier|
+          allocate.tap { |object| object.send(:initialize, identifier) }
+        end
+      end.not_to raise_error
+    end
+  end
+
+  describe "reflection policy" do
+    it "allows non-constructor reflection on a hardened Multiton" do
+      klass = Class.new do
+        include Singulus::Multiton
+
+        def self.health
+          :ok
+        end
+
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+
+      expect(klass.method(:health).call).to eq(:ok)
+      expect(klass.public_method(:health).call).to eq(:ok)
+      expect(klass.singleton_method(:health).call).to eq(:ok)
+      expect(klass.send(:health)).to eq(:ok)
+      expect(klass.public_send(:health)).to eq(:ok)
+    end
+
+    it "allows reflective constructor access in standard Multiton mode" do
+      klass = Class.new do
+        include Singulus::Multiton.with(:standard)
+
+        attr_reader :identifier
+
+        def initialize(identifier)
+          @identifier = identifier
+        end
+      end
+
+      constructor = klass.method(:new)
+      instance = constructor.call(:reflected)
+
+      expect(instance).to be_a(klass)
+      expect(instance.identifier).to eq(:reflected)
+    end
+  end
+
+  it "keeps a non-constructor singleton method definition untouched in standard Multiton mode" do
+    klass = Class.new do
+      include Singulus::Multiton.with(:standard)
+
+      def initialize(identifier)
+        @identifier = identifier
+      end
+    end
+
+    expect do
+      klass.define_singleton_method(:health) { :ok }
+    end.not_to raise_error
+
+    expect(klass.health).to eq(:ok)
   end
 end

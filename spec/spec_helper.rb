@@ -6,6 +6,7 @@ if ENV["COVERAGE"] == "true"
 end
 
 require "singulus"
+require_relative "support/multiton_helpers"
 
 RSpec.configure do |config|
   config.order = :random
