@@ -30,6 +30,9 @@ jobs:
       - name: Run RuboCop
         run: bundle exec rubocop --parallel
 
+      - name: Generate API documentation
+        run: bundle exec rake yard
+
   test:
     runs-on: ubuntu-latest
 

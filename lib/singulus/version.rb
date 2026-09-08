@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
 module Singulus
-  VERSION = "0.1.0"
+  # Current gem version in semantic versioning format.
+  # @return [String] version used by the gem specification
+  VERSION = "0.1.1"
 end

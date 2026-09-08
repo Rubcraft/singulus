@@ -5,3 +5,5 @@ Gemfile.lock
 *.gem
 /coverage/
 .rubocop-http---cache
+/.yardoc/
+/doc/

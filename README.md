@@ -241,6 +241,26 @@ bundle exec rake build
 
 SimpleCov enforces line and branch coverage, while CI tests supported Ruby versions independently from RuboCop.
 
+## API documentation
+
+Generate the YARD reference locally:
+
+```bash
+bundle install
+bundle exec rake yard
+```
+
+Open `doc/index.html` in a browser. The reference includes configuration,
+include-time options, errors, and the class methods installed by Singleton
+and Multiton. Installed methods appear on their pattern module's page; call
+these on your including class, while calling `.with` on the pattern module.
+The configuration object's reader/writer contract is documented under
+`Singulus.configuration`; its concrete class remains private.
+
+`.yardopts` excludes private implementation details. Generated HTML and the
+YARD cache are ignored by Git. Documentation generation fails on YARD warnings
+and runs in the CI quality job and `bundle exec rake ci`.
+
 ## Releasing
 
 Repository initialization, version-control operations, and release-tag creation are managed by the Rubcraft Toolkit. Singulus itself does not prescribe or duplicate those commands.

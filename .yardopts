@@ -1,0 +1,11 @@
+--markup markdown
+--main README.md
+--title "Singulus API Reference"
+--no-private
+--query '!object.path.start_with?("Singulus::Internal")'
+--fail-on-warning
+lib/**/*.rb
+-
+README.md
+CHANGELOG.md
+LICENSE.txt

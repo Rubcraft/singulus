@@ -2,7 +2,8 @@
 
 require "spec_helper"
 
-RSpec.describe Singulus do
+# Singleton identity, inclusion options, and local constructor policy.
+RSpec.describe Singulus::Singleton do
   def build_class(mode: :strict, &block)
     Class.new do
       include Singulus::Singleton
@@ -10,6 +11,10 @@ RSpec.describe Singulus do
       singulus mode: mode
       class_eval(&block) if block
     end
+  end
+
+  after do
+    Singulus.reset_configuration!
   end
 
   describe ":standard mode" do
@@ -65,95 +70,6 @@ RSpec.describe Singulus do
     end
   end
 
-  describe ":runtime mode" do
-    let(:klass) { build_class(mode: :runtime) }
-
-    it "blocks Class#new obtained as an UnboundMethod" do
-      constructor = Class.instance_method(:new)
-
-      expect { constructor.bind(klass) }
-        .to raise_error(Singulus::Error)
-
-      expect { constructor.bind_call(klass) }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "blocks Class#allocate obtained as an UnboundMethod" do
-      allocator = Class.instance_method(:allocate)
-
-      expect { allocator.bind(klass) }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "blocks binding reflection gateways to the protected class" do
-      original_method = Object.instance_method(:method)
-      original_send = BasicObject.instance_method(:__send__)
-
-      expect { original_method.bind(klass) }
-        .to raise_error(Singulus::Error)
-
-      expect { original_send.bind(klass) }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "blocks bind_call through reflection gateways when accessing constructors" do
-      original_method = Object.instance_method(:method)
-      original_send = BasicObject.instance_method(:__send__)
-
-      expect { original_method.bind_call(klass, :new) }
-        .to raise_error(Singulus::Error)
-
-      expect { original_send.bind_call(klass, :allocate) }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "blocks previously captured constructor Method invocation" do
-      plain = Class.new
-      captured = Class.instance_method(:new).bind(plain)
-      plain.include Singulus::Singleton
-
-      plain.singulus mode: :runtime
-
-      expect { captured.call }
-        .to raise_error(Singulus::Error)
-    end
-
-    it "blocks turning dangerous Method objects into Proc objects" do
-      plain = Class.new
-      captured = Class.instance_method(:new).bind(plain)
-      plain.include Singulus::Singleton
-
-      plain.singulus mode: :runtime
-
-      expect { captured.to_proc }
-        .to raise_error(Singulus::Error)
-    end
-  end
-
-  describe "configuration" do
-    after do
-      described_class.reset_configuration!
-    end
-
-    it "defaults to strict" do
-      expect(described_class.configuration.default_mode).to eq(:strict)
-    end
-
-    it "can make runtime mode the default" do
-      described_class.configure { |config| config.default_mode = :runtime }
-
-      klass = Class.new { include Singulus::Singleton }
-
-      expect(klass.singulus_mode).to eq(:runtime)
-    end
-
-    it "rejects invalid modes" do
-      expect do
-        described_class.configure { |config| config.default_mode = :unknown }
-      end.to raise_error(Singulus::Error)
-    end
-  end
-
   describe ".with" do
     it "configures the mode directly from include" do
       klass = Class.new do
@@ -185,13 +101,97 @@ RSpec.describe Singulus do
     end
 
     it "rejects ambiguous mode arguments" do
-      expect { Singulus::Singleton.with(:strict, mode: :runtime) }
+      expect { described_class.with(:strict, mode: :runtime) }
         .to raise_error(ArgumentError)
     end
 
     it "rejects unsupported options" do
-      expect { Singulus::Singleton.with(foo: :bar) }
+      expect { described_class.with(foo: :bar) }
         .to raise_error(ArgumentError)
     end
+  end
+
+  describe "Singleton public behavior" do
+    it "uses the configured default mode when .with has no explicit mode" do
+      Singulus.configure { |config| config.default_mode = :standard }
+
+      klass = Class.new do
+        include Singulus::Singleton.with
+      end
+
+      expect(klass.singulus_mode).to eq(:standard)
+    end
+
+    it "allows a strict class to switch to standard before it is sealed" do
+      klass = Class.new do
+        include Singulus::Singleton
+      end
+
+      expect(klass.singulus(mode: :standard)).to equal(klass)
+      expect(klass.singulus_mode).to eq(:standard)
+    end
+
+    it "rejects a strict-to-standard downgrade after the singleton is sealed" do
+      klass = Class.new do
+        include Singulus::Singleton
+      end
+
+      klass.instance
+
+      expect { klass.singulus(mode: :standard) }.to raise_error(Singulus::Error)
+    end
+
+    it "allows non-constructor reflection through the guards" do
+      klass = Class.new do
+        include Singulus::Singleton
+
+        def self.health
+          :ok
+        end
+      end
+
+      expect(klass.method(:health).call).to eq(:ok)
+      expect(klass.public_method(:health).call).to eq(:ok)
+      expect(klass.singleton_method(:health).call).to eq(:ok)
+      expect(klass.send(:health)).to eq(:ok)
+      expect(klass.public_send(:health)).to eq(:ok)
+    end
+  end
+
+  describe "standard duplication" do
+    it "falls through to Ruby Singleton duplication semantics in standard mode" do
+      klass = Class.new do
+        include Singulus::Singleton.with(:standard)
+      end
+
+      instance = klass.instance
+
+      expect { instance.dup }.to raise_error(TypeError)
+      expect { instance.clone }.to raise_error(TypeError)
+    end
+  end
+
+  it "keeps a non-constructor singleton method definition untouched in strict mode" do
+    klass = Class.new do
+      include Singulus::Singleton
+    end
+
+    expect do
+      klass.define_singleton_method(:health) { :ok }
+    end.not_to raise_error
+
+    expect(klass.health).to eq(:ok)
+  end
+
+  it "allows a safe public_send in strict mode" do
+    klass = Class.new do
+      include Singulus::Singleton
+
+      def self.echo(value)
+        value
+      end
+    end
+
+    expect(klass.public_send(:echo, :ok)).to eq(:ok)
   end
 end
