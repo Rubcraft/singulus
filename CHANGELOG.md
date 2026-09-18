@@ -6,6 +6,14 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 
 ## [Unreleased]
 
+### Added
+
+- Added Bundler Audit dependency checks to the CI workflow.
+
+### Fixed
+
+- Added the missing HTTPS `homepage_uri` gem metadata.
+
 ## [0.1.1] - 2026-09-08
 
 ### Changed

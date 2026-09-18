@@ -3,5 +3,5 @@
 module Singulus
   # Current gem version in semantic versioning format.
   # @return [String] version used by the gem specification
-  VERSION = "0.1.1"
+  VERSION = "0.1.2"
 end

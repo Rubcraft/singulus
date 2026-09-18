@@ -27,6 +27,9 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
+      - name: Audit dependencies
+        run: bundle exec bundler-audit check --update
+
       - name: Run RuboCop
         run: bundle exec rubocop --parallel
 

@@ -29,4 +29,5 @@ Gem::Specification.new do |spec|
   end
 
   spec.require_paths = ["lib"]
+  spec.metadata["homepage_uri"] = "https://github.com/Rubcraft/singulus"
 end
